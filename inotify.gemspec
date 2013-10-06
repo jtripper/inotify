@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'inotify'
-  s.version     = '1.0.1'
+  s.version     = '1.0.2'
   s.date        = '2013-10-06'
   s.summary     = "Inotify wrapper"
   s.description = "Inotify wrapper for Ruby."
