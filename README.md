@@ -3,6 +3,14 @@ Ruby Inotify
 
 Basic Ruby inotify wrapper.
 
+## Installation
+
+inotify can be installed via ruby gems:
+
+  $ gem install inotify
+
+## Usage 
+
 Usage is pretty simple:
 
 ```ruby
