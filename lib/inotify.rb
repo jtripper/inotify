@@ -74,8 +74,13 @@ end
 
 # The basic ctypes for every function required by inotify
 module InotifyCtypes
+
+  SIZEOF_INOTIFY = 16
+  NAME_MAX       = 1024
+
   # open libc
   $libc = Fiddle.dlopen('/lib/libc.so.6')
+  # $libc = Fiddle.dlopen('/lib/i386-linux-gnu/libc.so.6')
 
   # import required functions
   $__inotify_init = Fiddle::Function.new(
@@ -117,7 +122,28 @@ module InotifyCtypes
     event["cookie"] = cookie
     event["len"]    = len
     event["name"]   = name
+    event["path"]   = @wds[wd]
     event
+  end
+
+  # Parse the results of read on an inotify file descriptor.
+  def inotify_events(buffer, len)
+    events = [ ]
+    upto = 0
+
+    # Loop to parse all the events
+    while upto < len
+
+      event = inotify_event(buffer)
+      events << event
+
+      # Advance to next event
+      struct_size = SIZEOF_INOTIFY+event["len"]
+      buffer = buffer[struct_size..10000]
+      upto += struct_size
+    end
+
+    events
   end
 
   # Open inotify file descriptor.
@@ -136,12 +162,23 @@ module InotifyCtypes
   end
 
   # Allocate a buffer, call read and then parse the result.
+  # Provided for backback compatibility
   def inotify_read(fd)
     max_len = 20 + 1024 + 1
     cbuff = Fiddle::Pointer.malloc(max_len)
     max_len.times { |index| cbuff[index] = 0 }
     len = $__read.call(fd, cbuff, max_len)
     inotify_event(cbuff.to_s(len))
+  end
+
+
+  # Allocate a buffer, call read and then parse the results.
+  def inotify_read_multi(fd)
+    max_len = 4*(SIZEOF_INOTIFY+NAME_MAX)
+    cbuff = Fiddle::Pointer.malloc(max_len)
+    max_len.times { |index| cbuff[index] = 0 }
+    len = $__read.call(fd, cbuff, max_len)
+    inotify_events(cbuff.to_s(len), len)
   end
 
   # Close inotify file descriptor.
@@ -207,8 +244,16 @@ class Inotify
 
   # Wait for an inotify event to happen, yields the path, mask, and file name.
   def wait_for_event()
-    event = inotify_read(@fd)
-    yield @wds[event["wd"]],  event["mask"], event["name"]
+    events = inotify_read_multi(@fd)
+    events.each { |event|
+      yield event["path"], event["mask"], event["name"]
+    }
+  end
+
+  # Wait for an inotify events to happen, yields an events array
+  def wait_for_events()
+    events = inotify_read_multi(@fd)
+    yield events
   end
 
   # Check if an event is set in an event mask.
