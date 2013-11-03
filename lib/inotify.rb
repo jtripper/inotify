@@ -74,13 +74,11 @@ end
 
 # The basic ctypes for every function required by inotify
 module InotifyCtypes
-
   SIZEOF_INOTIFY = 16
   NAME_MAX       = 1024
 
   # open libc
-  $libc = Fiddle.dlopen('/lib/libc.so.6')
-  # $libc = Fiddle.dlopen('/lib/i386-linux-gnu/libc.so.6')
+  $libc = Fiddle.dlopen('libc.so.6')
 
   # import required functions
   $__inotify_init = Fiddle::Function.new(
